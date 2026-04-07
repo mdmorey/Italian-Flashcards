@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Italian Flashcards</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #0a4d2e;
+            /* Italian Green */
+            --secondary: #cf2a27;
+            /* Italian Red */
+            --bg-overlay: rgba(0, 0, 0, 0.4);
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --text-dark: #1f2937;
+            --text-light: #f9fafb;
+            --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-color: #111;
+            color: var(--text-dark);
+        }
+
+        /* Dynamic Background Images */
+        #bg-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background-size: cover;
+            background-position: center;
+            transition: background-image 1s ease-in-out;
+            /* Default background */
+            background-image: url('https://images.unsplash.com/photo-1516483638261-f40af5aa3dc0?auto=format&fit=crop&q=80&w=2000');
+        }
+
+        #bg-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.6));
+        }
+
+        /* Header UI */
+        header {
+            padding: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--text-light);
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .category-filter {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .cat-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: var(--transition);
+            font-weight: 600;
+        }
+
+        .cat-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .cat-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(10, 77, 46, 0.6);
+        }
+
+        /* Flashcard Container */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            z-index: 10;
+        }
+
+        .scene {
+            width: 100%;
+            max-width: 600px;
+            height: 400px;
+            perspective: 1000px;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .card.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card__face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 24px;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            text-align: center;
+        }
+
+        .card__face--front {
+            border-top: 6px solid var(--primary);
+        }
+
+        .card__face--back {
+            transform: rotateY(180deg);
+            border-top: 6px solid var(--secondary);
+            justify-content: space-between;
+        }
+
+        /* Flashcard Typography */
+        .language-tag {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .it-word {
+            font-size: 4rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .en-word {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .it-sentence {
+            font-size: 1.8rem;
+            font-weight: 400;
+            color: #4b5563;
+            font-style: italic;
+            position: relative;
+            padding: 1rem;
+        }
+
+        .it-sentence::before {
+            content: '"';
+            font-size: 3rem;
+            color: rgba(0, 0, 0, 0.1);
+            position: absolute;
+            top: -10px;
+            left: -10px;
+        }
+
+        /* Action Buttons */
+        .btn-audio {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #e5e7eb;
+            color: var(--text-dark);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            transition: var(--transition);
+            margin-top: 1rem;
+        }
+
+        .btn-audio:hover {
+            transform: scale(1.1);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 8px 20px rgba(10, 77, 46, 0.2);
+        }
+
+        /* Prevent button clicks from flipping the card */
+        .prevent-flip {
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem 2rem;
+            border-radius: 9999px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-btn {
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            padding: 10px;
+            border-radius: 50%;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.3;
+            cursor: default;
+            transform: none;
+        }
+
+        .progress {
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        /* Helper for mobile */
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                gap: 1.5rem;
+                padding: 1.5rem;
+            }
+
+            .it-word {
+                font-size: 3rem;
+            }
+
+            .en-word {
+                font-size: 2rem;
+            }
+
+            .it-sentence {
+                font-size: 1.4rem;
+            }
+
+            .scene {
+                height: 350px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="bg-container"></div>
+
+    <header>
+        <h1><i data-lucide="compass"></i> Impara l'italiano</h1>
+        <div class="category-filter" id="categories">
+            <!-- Categories injected here -->
+        </div>
+    </header>
+
+    <main>
+        <div class="scene">
+            <div class="card" id="flashcard">
+                <!-- FRONT: Italian Word -->
+                <div class="card__face card__face--front">
+                    <span class="language-tag">Italiano</span>
+                    <div class="it-word" id="front-it-word">Ciao</div>
+
+                    <div class="prevent-flip" onclick="event.stopPropagation(); playAudio(currentCard.it_word)">
+                        <button class="btn-audio" aria-label="Pronounce Word">
+                            <i data-lucide="volume-2"></i>
+                        </button>
+                        <p style="margin-top: 10px; font-size: 0.9rem; color: #6b7280;">Pronuncia</p>
+                    </div>
+
+                    <div style="position: absolute; bottom: 20px; color: #9ca3af; font-size: 0.9rem;">
+                        Click to flip <i data-lucide="rotate-cw"
+                            style="width: 14px; display: inline-block; vertical-align: middle;"></i>
+                    </div>
+                </div>
+
+                <!-- BACK: English Translation + Italian Sentence -->
+                <div class="card__face card__face--back">
+                    <span class="language-tag">English / Examples</span>
+                    <div
+                        style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%;">
+                        <div class="en-word" id="back-en-word">Hello / Goodbye</div>
+
+                        <div style="width: 100%; height: 1px; background: #e5e7eb; margin: 1.5rem 0;"></div>
+
+                        <div class="it-sentence" id="back-it-sentence">Ciao, come stai?</div>
+
+                        <div class="prevent-flip" onclick="event.stopPropagation(); playAudio(currentCard.it_sentence)"
+                            style="margin-top: 1.5rem">
+                            <button class="btn-audio" aria-label="Read Sentence">
+                                <i data-lucide="mic"></i>
+                            </button>
+                            <p style="margin-top: 10px; font-size: 0.9rem; color: #6b7280;">Leggi la frase</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" id="btn-prev" onclick="changeCard(-1)">
+                <i data-lucide="chevron-left" style="width: 32px; height: 32px;"></i>
+            </button>
+            <div class="progress" id="progress-indicator">1 / 10</div>
+            <button class="control-btn" id="btn-next" onclick="changeCard(1)">
+                <i data-lucide="chevron-right" style="width: 32px; height: 32px;"></i>
+            </button>
+            <button class="control-btn" id="btn-shuffle" onclick="shuffleCards()" style="margin-left: 10px;">
+                <i data-lucide="shuffle" style="width: 24px; height: 24px;"></i>
+            </button>
+        </div>
+    </main>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Data for flashcards
+        const vocabulary = [
+            // Common Words & Phrases
+            { it_word: "Ciao", en_word: "Hello / Goodbye", it_sentence: "Ciao, come stai oggi?", category: "Phrases" },
+            { it_word: "Grazie", en_word: "Thank you", it_sentence: "Grazie mille per il tuo aiuto.", category: "Phrases" },
+            { it_word: "Per favore", en_word: "Please", it_sentence: "Un caffè, per favore.", category: "Phrases" },
+            { it_word: "Sì", en_word: "Yes", it_sentence: "Sì, capisco perfettamente.", category: "Common Basics" },
+            { it_word: "No", en_word: "No", it_sentence: "No, non lo so.", category: "Common Basics" },
+            { it_word: "Buongiorno", en_word: "Good morning", it_sentence: "Buongiorno, signore.", category: "Phrases" },
+            { it_word: "Arrivederci", en_word: "Goodbye", it_sentence: "Arrivederci e a presto!", category: "Phrases" },
+            { it_word: "Scusa", en_word: "Sorry / Excuse me", it_sentence: "Scusa, dov'è il bagno?", category: "Phrases" },
+            { it_word: "Prego", en_word: "You're welcome", it_sentence: "Prego, non c'è di che.", category: "Phrases" },
+            { it_word: "Buona notte", en_word: "Good night", it_sentence: "Buona notte e sogni d'oro.", category: "Phrases" },
+            { it_word: "Come ti chiami?", en_word: "What's your name?", it_sentence: "Ciao, come ti chiami?", category: "Phrases" },
+            { it_word: "Non capisco", en_word: "I don't understand", it_sentence: "Mi dispiace, non capisco.", category: "Phrases" },
+
+            // Pronouns
+            { it_word: "Io", en_word: "I", it_sentence: "Io sono americano.", category: "Pronouns" },
+            { it_word: "Tu", en_word: "You (informal)", it_sentence: "Tu parli bene italiano.", category: "Pronouns" },
+            { it_word: "Lui / Lei", en_word: "He / She", it_sentence: "Lei lavora a Roma.", category: "Pronouns" },
+            { it_word: "Noi", en_word: "We", it_sentence: "Noi andiamo in pizzeria.", category: "Pronouns" },
+            { it_word: "Voi", en_word: "You (plural)", it_sentence: "Voi siete molto gentili.", category: "Pronouns" },
+            { it_word: "Loro", en_word: "They", it_sentence: "Loro mangiano la pasta.", category: "Pronouns" },
+
+            // Numbers
+            { it_word: "Uno", en_word: "One", it_sentence: "Vorrei un gelato, uno solo.", category: "Numbers" },
+            { it_word: "Due", en_word: "Two", it_sentence: "Due biglietti per Milano, per favore.", category: "Numbers" },
+            { it_word: "Tre", en_word: "Three", it_sentence: "Siamo arrivati tre giorni fa.", category: "Numbers" },
+            { it_word: "Quattro", en_word: "Four", it_sentence: "Ci sono quattro stagioni.", category: "Numbers" },
+            { it_word: "Cinque", en_word: "Five", it_sentence: "Ho cinque fratelli.", category: "Numbers" },
+            { it_word: "Dieci", en_word: "Ten", it_sentence: "Ho dieci euro nel portafoglio.", category: "Numbers" },
+            { it_word: "Venti", en_word: "Twenty", it_sentence: "Venti minuti di ritardo.", category: "Numbers" },
+            { it_word: "Cento", en_word: "One Hundred", it_sentence: "Costa quasi cento euro.", category: "Numbers" },
+
+            // Colors
+            { it_word: "Rosso", en_word: "Red", it_sentence: "Il pomodoro è rosso.", category: "Colors" },
+            { it_word: "Blu", en_word: "Blue", it_sentence: "Il cielo è molto blu oggi.", category: "Colors" },
+            { it_word: "Verde", en_word: "Green", it_sentence: "Mi piace la maglietta verde.", category: "Colors" },
+            { it_word: "Giallo", en_word: "Yellow", it_sentence: "Il sole è giallo e caldo.", category: "Colors" },
+            { it_word: "Nero", en_word: "Black", it_sentence: "Bevo sempre il caffè nero.", category: "Colors" },
+            { it_word: "Bianco", en_word: "White", it_sentence: "Ha comprato una macchina bianca.", category: "Colors" },
+            { it_word: "Marrone", en_word: "Brown", it_sentence: "Ha gli occhi marroni.", category: "Colors" },
+            { it_word: "Rosa", en_word: "Pink", it_sentence: "I fiori sono di colore rosa.", category: "Colors" },
+            { it_word: "Arancione", en_word: "Orange", it_sentence: "Ho comprato una borsa arancione.", category: "Colors" },
+
+            // Food & Dining
+            { it_word: "Acqua", en_word: "Water", it_sentence: "Un bicchiere d'acqua, per favore.", category: "Food & Dining" },
+            { it_word: "Pane", en_word: "Bread", it_sentence: "Mi porti del pane?", category: "Food & Dining" },
+            { it_word: "Vino", en_word: "Wine", it_sentence: "Preferisco il vino rosso.", category: "Food & Dining" },
+            { it_word: "Formaggio", en_word: "Cheese", it_sentence: "Adoro il formaggio italiano.", category: "Food & Dining" },
+            { it_word: "Carne", en_word: "Meat", it_sentence: "Oggi mangiamo carne.", category: "Food & Dining" },
+
+            // Travel & Places
+            { it_word: "Stazione", en_word: "Station", it_sentence: "Dov'è la stazione dei treni?", category: "Travel" },
+            { it_word: "Bagno", en_word: "Bathroom", it_sentence: "Scusi, dov'è il bagno?", category: "Travel" },
+            { it_word: "Destra", en_word: "Right", it_sentence: "Gira a destra al semaforo.", category: "Travel" },
+            { it_word: "Sinistra", en_word: "Left", it_sentence: "L'hotel è a sinistra.", category: "Travel" },
+            { it_word: "Treno", en_word: "Train", it_sentence: "Il treno parte alle otto.", category: "Travel" },
+
+            // Family & People
+            { it_word: "Madre", en_word: "Mother / Mom", it_sentence: "Mia madre cucina benissimo.", category: "Family" },
+            { it_word: "Padre", en_word: "Father / Dad", it_sentence: "Mio padre lavora in ufficio.", category: "Family" },
+            { it_word: "Fratello", en_word: "Brother", it_sentence: "Mio fratello studia in università.", category: "Family" },
+            { it_word: "Sorella", en_word: "Sister", it_sentence: "Mia sorella è molto alta.", category: "Family" },
+            { it_word: "Amico", en_word: "Friend", it_sentence: "Lui è un mio caro amico.", category: "Family" }
+        ];
+
+        // Backgrounds List
+        const backgroundImages = [
+            'https://images.unsplash.com/photo-1516483638261-f40af5aa3dc0?auto=format&fit=crop&q=80&w=2000', // Colosseum
+            'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?auto=format&fit=crop&q=80&w=2000', // Venice
+            'https://images.unsplash.com/photo-1552832230-c0197dd311f5?auto=format&fit=crop&q=80&w=2000', // Rome streets
+            'https://images.unsplash.com/photo-1543429776-27826dd0f40d?auto=format&fit=crop&q=80&w=2000', // Florence
+            'https://images.unsplash.com/photo-1533671173673-1029c7b94921?auto=format&fit=crop&q=80&w=2000'  // Amalfi Coast
+        ];
+
+        // Variables
+        let currentDeck = [...vocabulary];
+        let currentIndex = 0;
+        let currentCategory = "All";
+        let currentCard = null;
+        let bgIndex = 0;
+
+        // Elements
+        const flashcard = document.getElementById('flashcard');
+        const bgContainer = document.getElementById('bg-container');
+
+        // Initial setup
+        function init() {
+            setupCategories();
+            loadCard(currentIndex);
+
+            // Flip behavior
+            flashcard.addEventListener('click', () => {
+                flashcard.classList.toggle('is-flipped');
+            });
+
+            // Change background every 30 seconds
+            setInterval(rotateBackground, 30000);
+        }
+
+        function setupCategories() {
+            const categoriesSet = new Set(vocabulary.map(v => v.category));
+            const categoriesBox = document.getElementById('categories');
+
+            // All Button
+            let html = `<button class="cat-btn active" onclick="setCategory('All')">Tutto (All)</button>`;
+            categoriesSet.forEach(cat => {
+                html += `<button class="cat-btn" onclick="setCategory('${cat}')">${cat}</button>`;
+            });
+
+            categoriesBox.innerHTML = html;
+        }
+
+        function setCategory(cat) {
+            currentCategory = cat;
+
+            // Update active state
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                if (btn.innerText.includes(cat)) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            // Filter deck
+            if (cat === 'All') {
+                currentDeck = [...vocabulary];
+            } else {
+                currentDeck = vocabulary.filter(v => v.category === cat);
+            }
+
+            currentIndex = 0;
+            loadCard(currentIndex);
+            rotateBackground(); // change image dynamically when switching topics
+        }
+
+        function loadCard(index) {
+            if (currentDeck.length === 0) return;
+
+            // Ensure card flips back to front before updating text
+            if (flashcard.classList.contains('is-flipped')) {
+                flashcard.classList.remove('is-flipped');
+                setTimeout(() => updateCardContent(index), 300);
+            } else {
+                updateCardContent(index);
+            }
+        }
+
+        function updateCardContent(index) {
+            currentCard = currentDeck[index];
+
+            document.getElementById('front-it-word').innerText = currentCard.it_word;
+            document.getElementById('back-en-word').innerText = currentCard.en_word;
+            document.getElementById('back-it-sentence').innerText = currentCard.it_sentence;
+
+            document.getElementById('progress-indicator').innerText = `${index + 1} / ${currentDeck.length}`;
+
+            // Update buttons
+            document.getElementById('btn-prev').disabled = index === 0;
+            document.getElementById('btn-next').disabled = index === currentDeck.length - 1;
+        }
+
+        function changeCard(dir) {
+            let newIndex = currentIndex + dir;
+            if (newIndex >= 0 && newIndex < currentDeck.length) {
+                currentIndex = newIndex;
+                loadCard(currentIndex);
+            }
+        }
+
+        function shuffleCards() {
+            for (let i = currentDeck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [currentDeck[i], currentDeck[j]] = [currentDeck[j], currentDeck[i]];
+            }
+            currentIndex = 0;
+            loadCard(currentIndex);
+            rotateBackground();
+        }
+
+        function rotateBackground() {
+            bgIndex = (bgIndex + 1) % backgroundImages.length;
+            bgContainer.style.backgroundImage = `url('${backgroundImages[bgIndex]}')`;
+        }
+
+        // --- Text to Speech ---
+        function playAudio(text) {
+            if (!('speechSynthesis' in window)) {
+                alert("Sorry, your browser doesn't support text to speech.");
+                return;
+            }
+
+            // Stop any currently playing audio
+            window.speechSynthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'it-IT'; // Italian Language
+            utterance.rate = 0.75;    // Slower for clearer learning
+            utterance.pitch = 1.25;   // Higher pitch for a distinctly more feminine tone
+
+            // Find Italian voice if available
+            const voices = window.speechSynthesis.getVoices();
+
+            // Filter all Italian voices and exclude known male voices
+            const itVoices = voices.filter(voice => {
+                const isItalian = voice.lang.replace('_', '-').toLowerCase().includes('it') || voice.lang.toLowerCase() === 'it';
+                const isMale = voice.name.toLowerCase().includes('luca') || voice.name.toLowerCase().includes('giorgio') || voice.name.toLowerCase().includes('rocco');
+                return isItalian && !isMale;
+            });
+
+            // Prioritize higher-quality, premium native Italian female voices
+            let bestVoice = null;
+            if (itVoices.length > 0) {
+                const femalePremiumNames = ['alice', 'paola', 'carmela', 'elsa', 'siri', 'google'];
+
+                // First: Look for downloaded high-quality 'Enhanced' or 'Premium' female models
+                bestVoice = itVoices.find(v => (v.name.toLowerCase().includes('enhanced') || v.name.toLowerCase().includes('premium')) && femalePremiumNames.some(name => v.name.toLowerCase().includes(name)))
+                    // Second: Look for recognized female names
+                    || itVoices.find(v => femalePremiumNames.some(name => v.name.toLowerCase().includes(name)))
+                    // Third: Any 'Enhanced' female-leaning voice without male names
+                    || itVoices.find(v => v.name.toLowerCase().includes('enhanced'))
+                    // Fallback
+                    || itVoices[0];
+            }
+
+            if (bestVoice) {
+                utterance.voice = bestVoice;
+                console.log("Selected feminine authentic voice:", bestVoice.name);
+            } else {
+                console.warn("No dedicated feminine Italian voice found. Falling back to default.");
+            }
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Fetch voices (Chrome needs a trigger)
+        window.speechSynthesis.onvoiceschanged = () => {
+            console.log("Voices loaded successfully.");
+        };
+
+        // Keyboard Support
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') changeCard(1);
+            if (e.key === 'ArrowLeft') changeCard(-1);
+            if (e.key === ' ' || e.key === 'Enter') {
+                flashcard.classList.toggle('is-flipped');
+            }
+        });
+
+        // Run
+        init();
+
+    </script>
+</body>
+
+</html>
